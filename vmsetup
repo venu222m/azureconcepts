@@ -1,0 +1,37 @@
+
+
+venu [ ~ ]$ az group create --name devops --location eastus
+{
+  "id": "/subscriptions/19e89ced-db1e-40e3-9c4a-27d4ee1f95b7/resourceGroups/devops",
+  "location": "eastus",
+  "managedBy": null,
+  "name": "devops",
+  "properties": {
+    "provisioningState": "Succeeded"
+  },
+  "tags": null,
+  "type": "Microsoft.Resources/resourceGroups"
+}
+venu [ ~ ]$ az vm create \
+  --resource-group devops \
+  --name devops-vm \
+  --image Ubuntu2204 \
+  --admin-username azureuser \
+  --generate-ssh-keys \
+  --size Standard_B2s \
+  --public-ip-sku Standard
+The default value of '--size' will be changed to 'Standard_D2s_v5' from 'Standard_DS1_v2' in a future release.
+{
+  "fqdns": "",
+  "id": "/subscriptions/19e89ced-db1e-40e3-9c4a-27d4ee1f95b7/resourceGroups/devops/providers/Microsoft.Compute/virtualMachines/devops-vm",
+  "location": "eastus",
+  "macAddress": "7C-1E-52-6A-BD-CC",
+  "powerState": "VM running",
+  "privateIpAddress": "10.1.0.4",
+  "publicIpAddress": "4.157.249.4",
+  "resourceGroup": "devops"
+}
+-----------
+| Priority | Port | Protocol | Source       | Destination | Action |
+| -------- | ---- | -------- | ------------ | ----------- | ------ |
+| 1001     | 80   | TCP      | Any or IP(s) | Any         | Allow  |
