@@ -1,0 +1,98 @@
+Step-by-Step Process: Azure Monitor Setup
+🔹 Step 1: Enable Monitoring for a Resource (e.g., VM)
+For a Virtual Machine:
+
+Go to Azure Portal → Virtual Machines → Select VM
+
+Click on Monitoring → Insights
+
+If not enabled, click Enable → Select a Log Analytics Workspace
+
+This installs the Monitoring agent to collect performance/log data.
+
+🔹 Step 2: Create a Log Analytics Workspace (if needed)
+bash
+Copy
+Edit
+az monitor log-analytics workspace create \
+  --resource-group my-rg \
+  --workspace-name myLogAnalytics \
+  --location eastus
+🔹 Step 3: Link the Resource to the Workspace
+bash
+Copy
+Edit
+az monitor diagnostic-settings create \
+  --name vm-diagnostics \
+  --resource <VM_RESOURCE_ID> \
+  --workspace <LOG_ANALYTICS_WORKSPACE_ID> \
+  --metrics '[{"category":"AllMetrics","enabled":true}]' \
+  --logs '[{"category":"Syslog","enabled":true}]'
+🔹 Step 4: View Logs in Azure Monitor
+Go to Azure Monitor → Logs
+
+Choose your Workspace
+
+Run KQL (Kusto Query Language) queries
+
+✅ Example Queries:
+
+kusto
+Copy
+Edit
+Heartbeat
+| where TimeGenerated > ago(30m)
+kusto
+Copy
+Edit
+Perf
+| where ObjectName == "Processor" and CounterName == "% Processor Time"
+| summarize avg(CounterValue) by bin(TimeGenerated, 5m)
+🔹 Step 5: Set Up an Alert Rule
+Go to Azure Monitor → Alerts → New Alert Rule
+
+Scope: Select the resource (e.g., VM)
+
+Condition: Example → CPU > 80% for 5 mins
+
+Action Group: Email, SMS, Logic App, Function, etc.
+
+Click Create
+
+🔹 Step 6: Create a Dashboard (Optional)
+Go to Azure Monitor → Metrics
+
+Add a chart → Select a metric (e.g., CPU)
+
+Pin to dashboard → Customize dashboard view
+
+🔹 Step 7: Application Insights (for App Monitoring)
+Use for real-time insights into app performance.
+
+bash
+Copy
+Edit
+az monitor app-insights component create \
+  --app app-insights-demo \
+  --location eastus \
+  --resource-group my-rg \
+  --application-type web
+🔒 Best Practices
+✅ Enable VM insights and boot diagnostics
+
+✅ Use action groups for central alert handling
+
+✅ Set retention in Log Analytics to save cost
+
+✅ Use Tags for alert targeting across environments
+
+✅ Use Application Map in App Insights for distributed tracing
+
+📦 Summary Table
+Component	Purpose
+VM Insights	VM performance monitoring
+Log Analytics	Central logging + queries
+Diagnostic Settings	Enable resource-level telemetry
+Alerts + Action Grps	Notify or auto-remediate issues
+Dashboards	Visual monitoring
+App Insights	Monitor application performance
