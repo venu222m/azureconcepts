@@ -1,0 +1,126 @@
+Here is a step-by-step guide to setting up Azure Traffic Manager — a DNS-based global load balancer — using Azure Cloud Shell (Bash) and Azure CLI.
+
+✅ What is Azure Traffic Manager?
+DNS-based routing to distribute traffic across global endpoints (e.g., VMs, App Services).
+
+Supports routing methods like:
+
+Priority (Failover)
+
+Weighted
+
+Performance
+
+Geographic
+
+Multivalue
+
+🧰 Scenario: Route traffic to 2 Azure Web Apps deployed in different regions
+🛠️ Step-by-Step: Setup Azure Traffic Manager with Two Web Apps
+✅ Step 1: Define Variables
+bash
+Copy
+Edit
+RG="trafficmgr-rg"
+LOCATION1="eastus"
+LOCATION2="westeurope"
+WEBAPP1="webapp$(openssl rand -hex 3)"
+WEBAPP2="webapp$(openssl rand -hex 3)"
+PLAN1="plan1"
+PLAN2="plan2"
+TM_PROFILE="mytrafficmanagerprofile"
+✅ Step 2: Create Resource Group
+bash
+Copy
+Edit
+az group create --name $RG --location $LOCATION1
+✅ Step 3: Create App Service Plans and Web Apps
+App in East US
+bash
+Copy
+Edit
+az appservice plan create --name $PLAN1 --resource-group $RG --location $LOCATION1 --sku B1 --is-linux
+az webapp create --name $WEBAPP1 --plan $PLAN1 --resource-group $RG --runtime "NODE|18-lts"
+App in West Europe
+bash
+Copy
+Edit
+az appservice plan create --name $PLAN2 --resource-group $RG --location $LOCATION2 --sku B1 --is-linux
+az webapp create --name $WEBAPP2 --plan $PLAN2 --resource-group $RG --runtime "NODE|18-lts"
+✅ Step 4: Deploy Sample HTML App to Both
+bash
+Copy
+Edit
+for APP in $WEBAPP1 $WEBAPP2; do
+  echo "<h1>Welcome to $APP</h1>" > index.html
+  az webapp deploy --resource-group $RG --name $APP --src-path index.html --type static
+done
+✅ Step 5: Create Azure Traffic Manager Profile
+bash
+Copy
+Edit
+az network traffic-manager profile create \
+  --name $TM_PROFILE \
+  --resource-group $RG \
+  --routing-method Performance \
+  --unique-dns-name $TM_PROFILE \
+  --ttl 30 \
+  --protocol HTTP \
+  --port 80 \
+  --path "/"
+✅ Step 6: Add Endpoints (App Services) to Traffic Manager
+bash
+Copy
+Edit
+az network traffic-manager endpoint create \
+  --name endpoint-eastus \
+  --profile-name $TM_PROFILE \
+  --resource-group $RG \
+  --type azureEndpoints \
+  --target-resource-id $(az webapp show --name $WEBAPP1 --resource-group $RG --query id -o tsv) \
+  --endpoint-status Enabled
+
+az network traffic-manager endpoint create \
+  --name endpoint-westeurope \
+  --profile-name $TM_PROFILE \
+  --resource-group $RG \
+  --type azureEndpoints \
+  --target-resource-id $(az webapp show --name $WEBAPP2 --resource-group $RG --query id -o tsv) \
+  --endpoint-status Enabled
+✅ Step 7: Test Traffic Manager
+Get the Traffic Manager DNS name:
+
+bash
+Copy
+Edit
+az network traffic-manager profile show \
+  --name $TM_PROFILE \
+  --resource-group $RG \
+  --query "dnsConfig.fqdn" -o tsv
+➡️ Open the DNS name in your browser:
+http://<tm-profile-name>.trafficmanager.net
+
+It will route you to the nearest or fastest web app based on your location.
+
+✅ Step 8: (Optional) Point Custom Domain to Traffic Manager
+Update your DNS provider to CNAME your custom domain to the traffic manager DNS.
+
+✅ Step 9: (Optional) Cleanup
+bash
+Copy
+Edit
+az group delete --name $RG --yes --no-wait
+📌 Summary of Components
+Component	Purpose
+2 x Azure Web Apps	App endpoints in different regions
+Traffic Manager	DNS-based global load balancing
+Routing Method	Performance-based
+HTML Page	Simple app to test redirection
+
+🔀 Routing Methods in Traffic Manager
+Method	Description
+Priority	Failover: primary > secondary
+Weighted	% based traffic split
+Performance	Nearest/fastest endpoint
+Geographic	Route users based on region
+Multivalue	Return multiple healthy IPs
