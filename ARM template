@@ -1,0 +1,168 @@
+Provision an Azure Virtual Machine using an ARM Template with Azure CLI in Cloud Shell.
+
+🧰 What You'll Use
+Azure Cloud Shell (Bash)
+
+ARM Template (JSON)
+
+Azure CLI (az)
+
+✅ Step 1: Create a Resource Group
+
+RESOURCE_GROUP="MyARMVMRG"
+LOCATION="eastus"
+
+az group create --name $RESOURCE_GROUP --location $LOCATION
+✅ Step 2: Create an ARM Template File
+Create a new file vm-template.json in Cloud Shell using the code or nano editor:
+
+code vm-template.json
+Paste this minimal ARM template to deploy a Windows VM (you can modify it for Linux later):
+
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "adminUsername": {
+      "type": "string"
+    },
+    "adminPassword": {
+      "type": "secureString"
+    },
+    "vmName": {
+      "type": "string",
+      "defaultValue": "myArmVM"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2022-08-01",
+      "name": "[parameters('vmName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_B1s"
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2019-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), 'NIC'))]"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmName'), 'NIC'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2022-07-01",
+      "name": "[concat(parameters('vmName'), 'NIC')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', concat(parameters('vmName'), 'VNET'), 'default')]"
+              },
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('vmName'), 'PIP'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', concat(parameters('vmName'), 'VNET'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('vmName'), 'PIP'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2022-07-01",
+      "name": "[concat(parameters('vmName'), 'VNET')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": ["10.0.0.0/16"]
+        },
+        "subnets": [
+          {
+            "name": "default",
+            "properties": {
+              "addressPrefix": "10.0.0.0/24"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2022-07-01",
+      "name": "[concat(parameters('vmName'), 'PIP')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      }
+    }
+  ]
+}
+Save and exit the editor.
+
+✅ Step 3: Deploy the ARM Template
+az deployment group create \
+  --resource-group $RESOURCE_GROUP \
+  --template-file vm-template.json \
+  --parameters adminUsername="azureuser" adminPassword="P@ssw0rd1234!"
+✅ After a few minutes, the VM will be provisioned. You can find it in the Azure Portal under the specified resource group.
+
+✅ Step 4: Get Public IP to Access the VM
+
+az vm show \
+  --resource-group $RESOURCE_GROUP \
+  --name myArmVM \
+  --show-details \
+  --query [publicIps] \
+  --output tsv
+✅ Step 5: (Optional) Clean up the resources
+
+az group delete --name $RESOURCE_GROUP --yes --no-wait
+📝 Tips
+For Linux VMs, change the imageReference to Ubuntu or CentOS.
+
+Replace adminPassword with sshKeyData if you want to use SSH key login.
+
+You can also break the template into template.json and parameters.json for better organization.
+
+Would you like:
+
+🐧 A Linux VM ARM template
+
+⚙️ A Terraform version
+
+🚀 A CI/CD pipeline (DevOps) to deploy this ARM template
+
+
+
+
