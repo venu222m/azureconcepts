@@ -1,0 +1,43 @@
+✅ Step 1: Open Azure Cloud Shell
+Go to https://shell.azure.com or open Cloud Shell from the Azure Portal (top navigation bar).
+
+Choose Bash (not PowerShell).
+
+Make sure your subscription and region are set correctly.
+
+✅ Step 2: Set Variables (Optional but recommended)
+
+# Set your values
+RESOURCE_GROUP="myResourceGroup"
+LOCATION="eastus"
+KEYVAULT_NAME="myKeyVault$RANDOM"
+✅ Step 3: Create Resource Group (If not already created)
+az group create --name $RESOURCE_GROUP --location $LOCATION
+✅ Step 4: Create Azure Key Vault
+
+az keyvault create --name $KEYVAULT_NAME --resource-group $RESOURCE_GROUP --location $LOCATION
+✅ Step 5: Add a Secret to Key Vault
+
+az keyvault secret set --vault-name $KEYVAULT_NAME --name "MySecret" --value "ThisIsMySecretValue"
+✅ Step 6: List Secrets in Key Vault
+
+az keyvault secret list --vault-name $KEYVAULT_NAME
+✅ Step 7: Get Secret Value
+
+az keyvault secret show --vault-name $KEYVAULT_NAME --name "MySecret" --query value -o tsv
+✅ Step 8: Access from Azure VM (optional)
+To access Key Vault from a VM, follow these:
+
+Assign a Managed Identity to the VM.
+
+Grant that identity access to Key Vault:
+
+az keyvault set-policy --name $KEYVAULT_NAME --object-id <VM-IDENTITY-OBJECT-ID> --secret-permissions get list
+Use the Azure Instance Metadata Service from the VM to retrieve secrets securely.
+
+📝 Useful Tips:
+Key Vault names must be globally unique.
+
+You can store secrets, keys, and certificates in Key Vault.
+
+Always use Managed Identities to access Key Vault from services like VM, App Service, or Function Apps.
