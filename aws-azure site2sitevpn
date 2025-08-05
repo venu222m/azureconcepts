@@ -1,0 +1,187 @@
+Here's a step-by-step guide to setting up Site-to-Site VPN between Azure and AWS, including architecture, configuration steps on both sides, and important tips.
+
+🌐 Overview: Azure–AWS Site-to-Site VPN
+A Site-to-Site VPN connects Azure Virtual Network (VNet) with AWS Virtual Private Cloud (VPC) over a secure IPsec tunnel.
+
+🔒 Use Case Examples:
+Hybrid cloud connectivity
+
+DR/Failover between AWS & Azure
+
+Multi-cloud applications
+
+🧭 Architecture Diagram (Simplified)
+less
+Copy
+Edit
+[ Azure VNet ]
+     |
+[Azure VPN Gateway]
+     ⇄ IPsec VPN Tunnel ⇄
+[AWS Virtual Private Gateway]
+     |
+[ AWS VPC ]
+📝 Pre-requisites
+Requirement	Azure	AWS
+VNet created	✅	✅
+Subnets assigned	✅	✅
+VPN Gateway	✅	✅
+Public IP for Gateway	✅	✅
+Routing enabled	✅	✅
+
+✅ Step-by-Step Configuration
+🔷 Step 1: Create a VPC and VPN Gateway on AWS
+Create VPC
+
+CIDR: 10.1.0.0/16
+
+Subnet: 10.1.1.0/24
+
+Create a Virtual Private Gateway
+
+AWS Console → VPC → VPN → Virtual Private Gateways → Create
+
+Name: aws-vgw
+
+Attach to the VPC
+
+Create Customer Gateway
+
+Go to VPC → VPN → Customer Gateways → Create
+
+Name: azure-cgw
+
+IP address: Azure VPN Gateway public IP (you will get this later)
+
+Routing: Static or Dynamic (BGP)
+
+Create VPN Connection
+
+Type: Site-to-Site
+
+Virtual Private Gateway: select aws-vgw
+
+Customer Gateway: select azure-cgw
+
+Routing: Static (use Azure subnet) or Dynamic (use BGP ASN)
+
+Once created, download the VPN configuration (choose Generic or Cisco format)
+
+🔷 Step 2: Create VNet and VPN Gateway on Azure
+Create Resource Group (if needed)
+
+bash
+Copy
+Edit
+az group create --name azure-vpn-rg --location eastus
+Create Virtual Network
+
+bash
+Copy
+Edit
+az network vnet create \
+  --resource-group azure-vpn-rg \
+  --name azure-vnet \
+  --address-prefix 10.0.0.0/16 \
+  --subnet-name GatewaySubnet \
+  --subnet-prefix 10.0.255.0/27
+🔔 Important: You must name the subnet GatewaySubnet.
+
+Create Public IP for Gateway
+
+bash
+Copy
+Edit
+az network public-ip create \
+  --resource-group azure-vpn-rg \
+  --name azure-vpn-gw-ip \
+  --allocation-method Dynamic
+Create VPN Gateway
+
+bash
+Copy
+Edit
+az network vnet-gateway create \
+  --name azure-vpn-gateway \
+  --public-ip-address azure-vpn-gw-ip \
+  --resource-group azure-vpn-rg \
+  --vnet azure-vnet \
+  --gateway-type Vpn \
+  --vpn-type RouteBased \
+  --sku VpnGw1 \
+  --no-wait \
+  --location eastus
+⌛ This takes ~20–30 mins.
+
+🔷 Step 3: Create Local Network Gateway (to represent AWS)
+Use the public IP from AWS VPN configuration and the AWS VPC CIDR:
+
+bash
+Copy
+Edit
+az network local-gateway create \
+  --resource-group azure-vpn-rg \
+  --name aws-local-gw \
+  --gateway-ip-address <AWS_VPN_PUBLIC_IP> \
+  --local-address-prefixes 10.1.0.0/16
+🔷 Step 4: Create Connection (Azure to AWS)
+bash
+Copy
+Edit
+az network vpn-connection create \
+  --name azure-to-aws-vpn \
+  --resource-group azure-vpn-rg \
+  --vnet-gateway1 azure-vpn-gateway \
+  --shared-key 'YourPresharedKey123' \
+  --local-gateway2 aws-local-gw \
+  --location eastus
+Use the pre-shared key from AWS VPN configuration.
+
+🔷 Step 5: Update AWS VPN with Azure Gateway Info
+If not done earlier:
+
+Go to Customer Gateway
+
+Enter the Azure VPN public IP
+
+Update VPN Connection on AWS side with:
+
+Azure public IP
+
+Pre-shared key
+
+Static route: Azure subnet 10.0.0.0/16
+
+🔷 Step 6: Update Route Tables
+On Azure:
+Add route to AWS subnet 10.1.0.0/16 via VPN Gateway
+
+On AWS:
+Edit VPC route table → Route to 10.0.0.0/16 via Virtual Private Gateway
+
+🔧 Step 7: Test the Connectivity
+Deploy VM in each cloud (Azure & AWS)
+
+Ensure NSGs & Security Groups allow ICMP or TCP (like SSH/HTTP)
+
+Ping or SSH from Azure VM to AWS VM and vice versa
+
+📊 Summary Table
+Component	Azure	AWS
+VNet / VPC	✅ 10.0.0.0/16	✅ 10.1.0.0/16
+VPN Gateway	✅	✅
+Public IP	✅	✅
+VPN Tunnel	IPsec Site-to-Site	
+Routing	UDR	Route Table
+Shared Key	Set manually	Set manually
+
+🔐 Tips & Best Practices
+Use BGP for dynamic routing in production.
+
+Monitor VPN using Azure Monitor and CloudWatch.
+
+Use Network Watcher in Azure for diagnostics.
+
+Always use strong pre-shared keys.
+
+Consider using ExpressRoute or Direct Connect for high-throughput production workloads.
