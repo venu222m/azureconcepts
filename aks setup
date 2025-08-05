@@ -1,0 +1,45 @@
+✅ 1. Prerequisites
+Make sure you have:
+
+An Azure subscription (Free or Paid).
+
+Azure CLI installed (az version) — or use the Azure Cloud Shell.
+
+kubectl installed for managing the cluster.
+
+(Optional) Terraform or Bicep for IaC.
+
+1.az login
+2.az group create --name aks-rg --location eastus
+3.az aks create   --resource-group aks-rg1   --name myAKSCluster   --node-count 1   --node-vm-size Standard_B2s   --enable-addons monitoring   --generate-ssh-keys
+4.curl -LO https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl
+sudo chmod +x ./kubectl
+sudo mv kubectl /usr/local/bin
+kubectl version 
+5.az provider register --namespace Microsoft.ContainerService
+az provider register --namespace Microsoft.Monitor
+
+
+6. az aks get-credentials --resource-group aks-rg --name myAKSCluster
+
+venu [ ~ ]$ kubectl get nodes
+NAME                                STATUS   ROLES    AGE    VERSION
+aks-nodepool1-58118951-vmss000000   Ready    <none>   9m4s   v1.32.6
+venu [ ~ ]$ kubectl create deployment nginx --image=nginx
+kubectl expose deployment nginx --port=80 --type=LoadBalancer
+deployment.apps/nginx created
+service/nginx exposed
+venu [ ~ ]$ kubectl get svc
+NAME         TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP      10.0.0.1       <none>        443/TCP        17m
+nginx        LoadBalancer   10.0.206.193   <pending>     80:30341/TCP   9s
+venu [ ~ ]$ kubectl get svc
+NAME         TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP      10.0.0.1       <none>        443/TCP        17m
+nginx        LoadBalancer   10.0.206.193   <pending>     80:30341/TCP   14s
+venu [ ~ ]$ kubectl get svc
+NAME         TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)        AGE
+kubernetes   ClusterIP      10.0.0.1       <none>           443/TCP        18m
+nginx        LoadBalancer   10.0.206.193   52.249.214.186   80:30341/TCP   85s
+
+52.249.214.186 this public ip you can nginx ststus
