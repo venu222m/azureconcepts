@@ -1,0 +1,154 @@
+Here is a step-by-step guide to set up a TCP Load Balancer in Azure and connect it to two or more Virtual Machines (VMs) using Azure CLI in Cloud Shell.
+
+✅ Goal
+Deploy:
+
+2 Virtual Machines (Ubuntu)
+
+1 TCP Load Balancer (Layer 4)
+
+Backend pool pointing to both VMs on port 80 (you can change)
+
+✅ Step 1: Set Variables
+bash
+Copy
+Edit
+RESOURCE_GROUP="lb-demo-rg"
+LOCATION="eastus"
+VNET_NAME="lbVnet"
+SUBNET_NAME="lbSubnet"
+LB_NAME="myTcpLB"
+FRONTEND_IP_NAME="myFrontEnd"
+BACKEND_POOL_NAME="myBackEndPool"
+PROBE_NAME="myHealthProbe"
+LB_RULE_NAME="myTcpRule"
+VM1_NAME="vm1"
+VM2_NAME="vm2"
+NIC1="nic1"
+NIC2="nic2"
+✅ Step 2: Create Resource Group
+bash
+Copy
+Edit
+az group create --name $RESOURCE_GROUP --location $LOCATION
+✅ Step 3: Create Virtual Network & Subnet
+bash
+Copy
+Edit
+az network vnet create \
+  --resource-group $RESOURCE_GROUP \
+  --name $VNET_NAME \
+  --subnet-name $SUBNET_NAME
+✅ Step 4: Create Public IP for Load Balancer
+bash
+Copy
+Edit
+az network public-ip create \
+  --resource-group $RESOURCE_GROUP \
+  --name myPublicIP \
+  --sku Basic
+✅ Step 5: Create Load Balancer
+bash
+Copy
+Edit
+az network lb create \
+  --resource-group $RESOURCE_GROUP \
+  --name $LB_NAME \
+  --sku Basic \
+  --frontend-ip-name $FRONTEND_IP_NAME \
+  --backend-pool-name $BACKEND_POOL_NAME \
+  --public-ip-address myPublicIP
+✅ Step 6: Create Health Probe
+bash
+Copy
+Edit
+az network lb probe create \
+  --resource-group $RESOURCE_GROUP \
+  --lb-name $LB_NAME \
+  --name $PROBE_NAME \
+  --protocol tcp \
+  --port 80
+✅ Step 7: Create Load Balancing Rule
+bash
+Copy
+Edit
+az network lb rule create \
+  --resource-group $RESOURCE_GROUP \
+  --lb-name $LB_NAME \
+  --name $LB_RULE_NAME \
+  --protocol tcp \
+  --frontend-port 80 \
+  --backend-port 80 \
+  --frontend-ip-name $FRONTEND_IP_NAME \
+  --backend-pool-name $BACKEND_POOL_NAME \
+  --probe-name $PROBE_NAME
+✅ Step 8: Create NICs for VMs and associate with Backend Pool
+bash
+Copy
+Edit
+for i in 1 2; do
+  az network nic create \
+    --resource-group $RESOURCE_GROUP \
+    --name nic$i \
+    --vnet-name $VNET_NAME \
+    --subnet $SUBNET_NAME \
+    --lb-name $LB_NAME \
+    --lb-address-pools $BACKEND_POOL_NAME
+done
+✅ Step 9: Create VMs with Custom Script to Install NGINX
+bash
+Copy
+Edit
+for i in 1 2; do
+  az vm create \
+    --resource-group $RESOURCE_GROUP \
+    --name vm$i \
+    --nics nic$i \
+    --image UbuntuLTS \
+    --admin-username azureuser \
+    --generate-ssh-keys \
+    --custom-data <(echo '#!/bin/bash
+      sudo apt-get update
+      sudo apt-get install -y nginx
+      echo "Hello from VM'$i'" | sudo tee /var/www/html/index.html')
+done
+✅ Step 10: Allow Port 80 on NSG
+bash
+Copy
+Edit
+for i in 1 2; do
+  az vm open-port --resource-group $RESOURCE_GROUP --name vm$i --port 80
+done
+✅ Step 11: Test Load Balancer
+bash
+Copy
+Edit
+az network public-ip show \
+  --resource-group $RESOURCE_GROUP \
+  --name myPublicIP \
+  --query ipAddress \
+  --output tsv
+➡️ Open the IP in your browser: http://<public-ip>
+
+You should see output alternating between:
+
+Hello from VM1
+
+Hello from VM2
+
+🧼 Step 12: (Optional) Cleanup
+bash
+Copy
+Edit
+az group delete --name $RESOURCE_GROUP --yes --no-wait
+📌 Summary of Resources Created
+Resource	Purpose
+Virtual Network	Isolated network for VMs
+Subnet	Subnet for VMs
+2 NICs	Each connected to LB backend
+2 VMs (Ubuntu + NGINX)	Web servers
+Public IP	IP for Load Balancer
+Load Balancer	TCP LB on port 80
+Health Probe	TCP probe on port 80
+Load Balancing Rule	Frontend to Backend mapping (port 80)
+
