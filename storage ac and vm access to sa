@@ -53,4 +53,19 @@ ssh azureuser@<VM_Public_IP>
 Step 2: Install curl or wget if not installed
 sudo apt update && sudo apt install -y curl
 curl -O https://mystorageaccount.blob.core.windows.net/mycontainer/sample.txt
+The file sample.txt is now downloaded inside your VM
+If Blob is Private (Secured), use SAS Token
+To generate a SAS token:
+az storage blob generate-sas \
+  --account-name $storageAccount \
+  --container-name $containerName \
+  --name sample.txt \
+  --permissions r \
+  --expiry 2025-12-31T23:59Z \
+  --output tsv
+Then use:
+
+curl -O "https://<storageaccount>.blob.core.windows.net/<container>/sample.txt?<sas-token>"
+
+
 
