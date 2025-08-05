@@ -1,0 +1,56 @@
+
+# Set the values for your storage account
+resourceGroup="myResourceGroup"
+location="eastus"
+storageAccount="mystorageaccount$RANDOM"  # Name must be unique
+Step 2: Create a Resource Group
+
+
+az group create --name $resourceGroup --location $location
+Step 3: Create the Storage Account
+az storage account create \
+  --name $storageAccount \
+  --resource-group $resourceGroup \
+  --location $location \
+  --sku Standard_LRS \
+  --kind StorageV2
+Step 4: Verify the Storage Account
+az storage account show --name $storageAccount --resource-group $resourceGroup
+
+Here’s the next step-by-step guide to:
+
+✅ Upload a file to Azure Storage Account
+✅ Access the uploaded file from an Azure VM
+
+containerName="mycontainer"
+
+az storage container create \
+  --name $containerName \
+  --account-name $storageAccount \
+  --auth-mode login \
+  --public-access blob
+ You can keep --public-access blob for anonymous read access (or set private for secure access).
+ Step 2: Upload a file
+Let’s upload a simple file (you can create one or upload your own):
+
+echo "Hello from Cloud Shell!" > sample.txt
+
+az storage blob upload \
+  --account-name $storageAccount \
+  --container-name $containerName \
+  --name sample.txt \
+  --file sample.txt \
+  --auth-mode login
+
+  az storage blob url \
+  --container-name $containerName \
+  --name sample.txt \
+  --account-name $storageAccount
+https://mystorageaccount.blob.core.windows.net/mycontainer/sample.txt
+Part 2: Access File from Azure VM
+Assuming you have a Linux VM already created in the same subscription:
+ssh azureuser@<VM_Public_IP>
+Step 2: Install curl or wget if not installed
+sudo apt update && sudo apt install -y curl
+curl -O https://mystorageaccount.blob.core.windows.net/mycontainer/sample.txt
+
