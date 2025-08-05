@@ -1,0 +1,110 @@
+Here’s a clear and complete guide to Azure Service Principal (SP) — its use and step-by-step setup using Azure Cloud Shell (Bash) and Azure CLI.
+
+🔐 What is a Service Principal?
+A Service Principal is an identity used by applications, automation tools (like Terraform, Jenkins), or scripts to access Azure resources securely — without using a user's identity.
+
+✅ Common Use Cases
+Use Case	Why Use Service Principal?
+Terraform automation	Authenticate without storing user secrets
+Azure DevOps pipelines	Secure access to Azure from CI/CD
+Ansible / Jenkins automation	Scripted resource provisioning
+Role-based access	Control exactly what the SP can access
+
+🛠️ Step-by-Step: Create and Use Azure Service Principal
+✅ Step 1: Login to Azure CLI (Cloud Shell)
+bash
+Copy
+Edit
+az login
+✅ Step 2: Set Variables
+bash
+Copy
+Edit
+SP_NAME="myServicePrincipal"
+RG="my-resource-group"
+✅ Step 3: Create a Resource Group (optional)
+bash
+Copy
+Edit
+az group create --name $RG --location eastus
+✅ Step 4: Create the Service Principal with Role Assignment
+Example: Assign Contributor role to the resource group
+
+bash
+Copy
+Edit
+az ad sp create-for-rbac \
+  --name $SP_NAME \
+  --role Contributor \
+  --scopes /subscriptions/$(az account show --query id -o tsv)/resourceGroups/$RG
+🔐 Output:
+
+json
+Copy
+Edit
+{
+  "appId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "displayName": "myServicePrincipal",
+  "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "tenant": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+⚠️ Save the appId, password, and tenant — these are your login credentials.
+
+✅ Step 5: Use the Service Principal for Authentication
+From a script or Terraform, etc.:
+
+bash
+Copy
+Edit
+az login --service-principal \
+  --username <appId> \
+  --password <password> \
+  --tenant <tenant>
+✅ Step 6: Confirm Permissions (optional)
+bash
+Copy
+Edit
+az role assignment list --assignee <appId> -o table
+📌 Notes
+Element	Purpose
+appId	Acts like a username
+password	Secret credential
+tenant	Azure AD tenant ID
+scope	Limit access to subscription, RG, or resource
+role	RBAC permission (Reader, Contributor, etc.)
+
+🔁 Optional: Delete Service Principal
+bash
+Copy
+Edit
+az ad sp delete --id <appId>
+✅ Example: Use with Terraform
+In Terraform provider block:
+
+hcl
+Copy
+Edit
+provider "azurerm" {
+  features {}
+
+  client_id       = "appId"
+  client_secret   = "password"
+  tenant_id       = "tenant"
+  subscription_id = "subscriptionId"
+}
+🔒 Best Practices
+🔐 Never expose the secret/password.
+
+⏳ Rotate credentials regularly.
+
+🔒 Use least privilege role (e.g., Reader instead of Contributor if needed).
+
+🛡️ Store credentials securely (Key Vault, GitHub Secrets, etc.)
+
+Would you like:
+
+Terraform code to create SP automatically?
+
+SP with limited permissions (like only for Storage)?
+
+Use SP with Azure DevOps service connection?
