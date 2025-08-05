@@ -1,0 +1,163 @@
+To set up an Application Load Balancer (Layer 7, HTTP/HTTPS) in Azure for Virtual Machines, the Azure service you’ll use is Azure Application Gateway — not the basic Azure Load Balancer.
+
+✅ What You’ll Build
+Resource	Purpose
+2 x Virtual Machines	Serve a web app (e.g., NGINX)
+Virtual Network	Networking for all components
+Application Gateway	Layer 7 HTTP load balancing
+Public IP	Entry point to the Application Gateway
+
+🔧 Prerequisites
+Use Azure Cloud Shell (Bash) or local Azure CLI
+
+🛠️ Step-by-Step: Set up Azure Application Gateway (App Gateway) with VMs
+✅ Step 1: Define Variables
+bash
+Copy
+Edit
+RG="appgw-rg"
+LOCATION="eastus"
+VNET="appgw-vnet"
+SUBNET1="appgw-subnet"
+SUBNET2="backend-subnet"
+APPGW_NAME="myAppGateway"
+PUBLIC_IP="appgw-pip"
+VM1="webvm1"
+VM2="webvm2"
+✅ Step 2: Create Resource Group
+bash
+Copy
+Edit
+az group create --name $RG --location $LOCATION
+✅ Step 3: Create Virtual Network and Subnets
+App Gateway requires dedicated subnet
+
+bash
+Copy
+Edit
+az network vnet create \
+  --resource-group $RG \
+  --name $VNET \
+  --address-prefix 10.0.0.0/16 \
+  --subnet-name $SUBNET1 \
+  --subnet-prefix 10.0.0.0/24
+
+az network vnet subnet create \
+  --resource-group $RG \
+  --vnet-name $VNET \
+  --name $SUBNET2 \
+  --address-prefix 10.0.1.0/24
+✅ Step 4: Create Public IP for Application Gateway
+bash
+Copy
+Edit
+az network public-ip create \
+  --resource-group $RG \
+  --name $PUBLIC_IP \
+  --sku Standard \
+  --allocation-method Static
+✅ Step 5: Create NICs for VMs
+bash
+Copy
+Edit
+az network nic create \
+  --resource-group $RG \
+  --name nic1 \
+  --vnet-name $VNET \
+  --subnet $SUBNET2
+
+az network nic create \
+  --resource-group $RG \
+  --name nic2 \
+  --vnet-name $VNET \
+  --subnet $SUBNET2
+✅ Step 6: Create Ubuntu VMs with NGINX
+bash
+Copy
+Edit
+for i in 1 2; do
+  az vm create \
+    --resource-group $RG \
+    --name webvm$i \
+    --nics nic$i \
+    --image UbuntuLTS \
+    --admin-username azureuser \
+    --generate-ssh-keys \
+    --custom-data <(echo '#!/bin/bash
+      sudo apt update
+      sudo apt install -y nginx
+      echo "Hello from VM'$i'" | sudo tee /var/www/html/index.html')
+done
+✅ Step 7: Create Application Gateway
+7.1 Get subnet ID
+bash
+Copy
+Edit
+APPGW_SUBNET_ID=$(az network vnet subnet show \
+  --resource-group $RG \
+  --vnet-name $VNET \
+  --name $SUBNET1 \
+  --query id -o tsv)
+7.2 Create App Gateway with Backend Pool (no VM targets yet)
+bash
+Copy
+Edit
+az network application-gateway create \
+  --name $APPGW_NAME \
+  --location $LOCATION \
+  --resource-group $RG \
+  --capacity 2 \
+  --sku Standard_v2 \
+  --frontend-port 80 \
+  --http-settings-cookie-based-affinity Disabled \
+  --http-settings-protocol Http \
+  --http-settings-port 80 \
+  --vnet-name $VNET \
+  --subnet $SUBNET1 \
+  --public-ip-address $PUBLIC_IP
+✅ Step 8: Add VMs to Backend Pool
+8.1 Get IPs of VM NICs
+bash
+Copy
+Edit
+IP1=$(az network nic show --resource-group $RG --name nic1 --query "ipConfigurations[0].privateIpAddress" -o tsv)
+IP2=$(az network nic show --resource-group $RG --name nic2 --query "ipConfigurations[0].privateIpAddress" -o tsv)
+8.2 Add backend pool addresses
+bash
+Copy
+Edit
+az network application-gateway address-pool update \
+  --gateway-name $APPGW_NAME \
+  --resource-group $RG \
+  --name appGatewayBackendPool \
+  --servers $IP1 $IP2
+✅ Step 9: Test Application Gateway
+Get the public IP:
+
+bash
+Copy
+Edit
+az network public-ip show \
+  --resource-group $RG \
+  --name $PUBLIC_IP \
+  --query ipAddress \
+  -o tsv
+👉 Open in browser: http://<public-ip>
+
+You should see:
+
+Hello from VM1
+
+Hello from VM2 (on refresh)
+
+✅ Step 10: (Optional) Clean Up
+bash
+Copy
+Edit
+az group delete --name $RG --yes --no-wait
+📌 Summary of Resources
+Resource	Description
+2 x Ubuntu VMs	Backend servers with NGINX
+Application Gateway	L7 HTTP load balancer
+Public IP	Access point for App Gateway
+VNet + Subnets	Network segmentation for app gateway
