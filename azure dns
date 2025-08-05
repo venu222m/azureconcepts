@@ -1,0 +1,135 @@
+What is Azure DNS?
+Azure DNS is a DNS hosting service provided by Microsoft Azure that allows you to host your DNS domain in Azure and manage DNS records using Azure tools.
+
+✅ Azure DNS Use Cases
+Use Case	Description
+🔄 Domain name resolution	Resolve www.yourdomain.com to your app or VM IP
+🎯 Custom domain mapping	Map your domain to App Service, Load Balancer, etc.
+📦 Internal DNS (Private DNS)	Resolve names within VNet (for internal apps)
+🔐 Secure routing	Use with Azure Front Door, App Gateway, Traffic Manager
+📡 Hybrid DNS	Combine Azure Private DNS with on-prem DNS via DNS forwarding
+
+🔎 DNS Types in Azure
+Type	Description
+🌐 Azure DNS (Public)	For external name resolution (internet-facing)
+🔐 Azure Private DNS	For internal name resolution within VNets
+
+🛠️ Step-by-Step: Public DNS Setup in Azure
+📌 Step 1: Register a Domain (Optional)
+You can buy a domain from providers like GoDaddy, Namecheap, etc.
+
+Or use an existing domain you own.
+
+📌 Step 2: Create a DNS Zone
+Using Azure Portal:
+Search → DNS Zones → Click + Create
+
+Select:
+
+Subscription
+
+Resource Group
+
+Name: mydomain.com
+
+Region: Global (no need to select)
+
+Click Review + Create → Create
+
+Using Azure CLI:
+bash
+Copy
+Edit
+az network dns zone create \
+  --name mydomain.com \
+  --resource-group myResourceGroup
+📌 Step 3: Add DNS Records
+You can add:
+
+Record Type	Purpose	Example
+A Record	Maps domain to IPv4	app.mydomain.com → 20.1.2.3
+CNAME	Alias to another domain	www → app.azurewebsites.net
+MX	Mail server record	mail.mydomain.com
+TXT	Verification / SPF	v=spf1 include:spf.protection.outlook.com
+
+Add a CNAME or A Record (Portal):
+Go to your DNS Zone → Click + Record Set
+
+Name: www
+
+Type: CNAME
+
+Value: mywebapp.azurewebsites.net
+
+TTL: 3600 (default)
+
+CLI Example (CNAME):
+bash
+Copy
+Edit
+az network dns record-set cname set-record \
+  --resource-group myResourceGroup \
+  --zone-name mydomain.com \
+  --record-set-name www \
+  --cname mywebapp.azurewebsites.net
+📌 Step 4: Update Name Servers in Domain Registrar
+After creating the DNS Zone, Azure gives 4 NS (Name Server) records.
+
+🔗 Go to your domain provider (like GoDaddy):
+
+Find DNS settings
+
+Replace existing NS records with Azure’s NS values
+
+e.g., ns1-02.azure-dns.com
+
+⏳ Propagation time: DNS changes may take up to 48 hours globally.
+
+📌 Step 5: Test DNS Resolution
+bash
+Copy
+Edit
+nslookup www.mydomain.com
+It should return the Azure App IP or hostname.
+
+🛠️ Step-by-Step: Azure Private DNS Setup
+📌 Step 1: Create Private DNS Zone
+bash
+Copy
+Edit
+az network private-dns zone create \
+  --resource-group myResourceGroup \
+  --name myapp.internal
+📌 Step 2: Link it to a Virtual Network
+bash
+Copy
+Edit
+az network private-dns link vnet create \
+  --resource-group myResourceGroup \
+  --zone-name myapp.internal \
+  --name link-to-vnet \
+  --virtual-network myVNet \
+  --registration-enabled true
+📌 Step 3: Add A Record (Internal VM)
+bash
+Copy
+Edit
+az network private-dns record-set a add-record \
+  --zone-name myapp.internal \
+  --resource-group myResourceGroup \
+  --record-set-name web \
+  --ipv4-address 10.0.1.4
+✅ Now internal VMs in the VNet can access web.myapp.internal
+
+🔐 Bonus: Use Azure DNS with App Services or Front Door
+App Service + Custom Domain: Bind domain in "Custom domains"
+
+Front Door + Custom Domain: Point www.domain.com to Front Door endpoint
+
+📦 Summary Table
+Component	Description
+DNS Zone	mydomain.com
+Record Types	A, CNAME, MX, TXT, NS
+CLI Tool	az network dns
+NS Update	Done in Domain Registrar
+Private DNS	For internal name resolution in VNets
