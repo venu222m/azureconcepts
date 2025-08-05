@@ -1,0 +1,108 @@
+What is Azure App Service?
+Azure App Service is a fully managed platform for building, deploying, and scaling web apps, REST APIs, and mobile backends.
+
+✅ Common Use Cases of Azure App Service
+Use Case	Description
+🌍 Host Web Applications	Deploy websites using .NET, Java, Python, Node.js, PHP.
+⚙️ Run APIs	Host RESTful APIs used by web/mobile apps.
+📱 Backend for Mobile Apps	Secure, scalable backends for mobile apps.
+🔄 Continuous Deployment	Integrate with GitHub, Azure DevOps for CI/CD.
+🔐 Authentication	Integrate with Azure AD, Google, Facebook for user login.
+📊 Staging/Slots	Use deployment slots for staging/testing before production.
+
+🛠️ Step-by-Step Process: Azure App Service Setup
+🔷 Step 1: Create an App Service Plan (Hosting Plan)
+Azure Portal:
+Search: App Services → + Create
+
+Choose:
+
+Subscription, Resource Group
+
+Name: mywebapp123
+
+Publish: Code or Docker Container
+
+Runtime stack: (e.g., Python, Node.js, .NET)
+
+Region
+
+App Service Plan: Choose or create new
+
+Click Review + Create → Create
+
+Azure CLI:
+bash
+Copy
+Edit
+az appservice plan create \
+  --name myAppPlan \
+  --resource-group myResourceGroup \
+  --sku B1 \
+  --is-linux
+🔷 Step 2: Create the Web App
+bash
+Copy
+Edit
+az webapp create \
+  --resource-group myResourceGroup \
+  --plan myAppPlan \
+  --name mywebapp123 \
+  --runtime "NODE|18-lts" \
+  --deployment-local-git
+✅ This gives you a Git URL to push code to the App Service.
+
+🔷 Step 3: Deploy Code to App Service
+Using Local Git:
+Add remote to your app:
+
+bash
+Copy
+Edit
+git remote add azure <deployment-url>
+git push azure master
+Or use GitHub Actions/DevOps Pipeline for CI/CD.
+🔷 Step 4: Access the Web App
+Once deployed, open your app in a browser:
+
+📎 URL: https://mywebapp123.azurewebsites.net
+
+🔷 Step 5: Monitor and Scale
+Portal:
+
+App Service → Overview: Restart, browse, scale up/down
+
+Metrics: CPU, memory, response time
+
+Logs: Enable application logging & diagnostics
+
+🔒 Optional: Enable Authentication
+App Service → Authentication
+
+Enable → Choose identity provider (Azure AD, Google, Facebook, etc.)
+
+Configure callbacks and secrets
+
+🧪 Optional: Deployment Slots (Staging)
+Go to App Service → Deployment slots
+
+Click + Add Slot → Name: staging
+
+Deploy code to staging and swap with production after testing
+
+🔐 Best Practices
+Practice	Description
+✅ Enable HTTPS	Enforce secure traffic
+✅ Enable App Insights	For monitoring & diagnostics
+✅ Use deployment slots	For zero-downtime deployments
+✅ Use custom domains	Add your DNS name
+✅ RBAC roles	Restrict App Service access via Azure RBAC
+
+📦 Summary Table
+Component	Value
+Platform	Azure App Service
+Deployment	Git, GitHub, Azure DevOps, Zip
+Runtime	.NET, Java, Python, Node.js, PHP, Docker
+Monitoring	Azure Monitor, App Insights
+Authentication	Azure AD, Facebook, Google
+Scaling	Manual or Auto
