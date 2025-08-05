@@ -1,0 +1,108 @@
+Step-by-Step Setup: Backup Azure VM
+🔧 Step 1: Create a Recovery Services Vault
+Using Azure Portal:
+Search for "Recovery Services vaults"
+
+Click + Add
+
+Fill in:
+
+Name: MyBackupVault
+
+Subscription & Resource Group
+
+Region
+
+Click Review + Create → Create
+
+Using Azure CLI:
+bash
+Copy
+Edit
+az backup vault create \
+  --name MyBackupVault \
+  --resource-group myResourceGroup \
+  --location eastus
+🔧 Step 2: Configure Backup for VM
+Using Azure Portal:
+Go to Recovery Services Vault
+
+Click + Backup
+
+Where is your workload running? → Azure
+
+What do you want to back up? → Virtual Machine
+
+Click Backup
+
+Select your VM(s) → Enable Backup
+
+Using Azure CLI:
+bash
+Copy
+Edit
+az backup protection enable-for-vm \
+  --vault-name MyBackupVault \
+  --resource-group myResourceGroup \
+  --vm myVM \
+  --policy-name DefaultPolicy
+🔧 Step 3: Trigger a Backup Manually
+Azure Portal:
+Recovery Services Vault → Backup Items → Azure VMs → Click your VM → Backup now
+
+Azure CLI:
+bash
+Copy
+Edit
+az backup backup-now \
+  --vault-name MyBackupVault \
+  --resource-group myResourceGroup \
+  --item-name myVM \
+  --backup-management-type AzureIaasVM
+🔧 Step 4: Restore a Backup
+Azure Portal:
+Go to Recovery Services Vault
+
+Backup Items → Azure VM
+
+Select VM → Restore VM
+
+Choose recovery point → Create new VM or replace disks
+
+Azure CLI:
+bash
+Copy
+Edit
+az backup restore restore-disks \
+  --resource-group myResourceGroup \
+  --vault-name MyBackupVault \
+  --container-name IaasVMContainer;iaasvmcontainerv2;myRG;myVM \
+  --item-name myVM \
+  --restore-to-staging-storage-account mystorageaccount \
+  --recovery-config recoveryconfig.json
+🔐 Backup Policy (Schedule & Retention)
+You can customize:
+
+Setting	Example
+Backup Time	Daily at 2:00 AM
+Retention	Daily: 30 days, Weekly: 12 weeks
+
+Portal → Vault → Backup Policies → Modify or Create New
+
+🔒 Security Features
+🔐 Soft Delete: Recover deleted backups for 14 days
+
+🧾 Recovery Points: Multiple restore options
+
+🔁 Encrypted backup
+
+✅ Role-Based Access (RBAC)
+
+📌 Summary Table
+Feature	Value
+Backup types	VM, SQL, Files, Disks, Apps
+Vault type	Recovery Services Vault
+Schedule	Daily, Weekly, Custom
+Retention policy	Short-term + long-term
+Restore types	File-level, Full VM, Disks
+CLI Tool	az backup
