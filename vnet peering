@@ -1,0 +1,123 @@
+Here’s a step-by-step guide to VNet Peering in Azure, with explanation, use cases, and how to set it up using Azure Portal and Azure CLI.
+
+🌐 What is VNet Peering?
+VNet Peering connects two virtual networks in Azure to enable private IP communication between them — across regions or within the same region.
+
+It’s low-latency, high-bandwidth, and does not traverse the public internet.
+
+✅ Common Use Cases
+Use Case	Description
+🔄 Application-Tier Communication	Web app in one VNet → DB in another VNet
+🌍 Multi-region App Architecture	Connect VNets across Azure regions
+🔐 Shared Services Model	Centralized DNS, AD, or firewall in a hub VNet
+🧪 Dev & Prod Isolation	Keep environments separate but allow controlled communication
+
+🛠️ Prerequisites
+You must have two VNets.
+
+Both VNets must have non-overlapping IP address ranges.
+
+Permissions: Network Contributor or higher on both VNets.
+
+📘 Step-by-Step (Azure Portal)
+✅ Step 1: Create Two VNets (if not already)
+Go to Virtual Networks → + Create
+
+VNet1: vnet-east → Address space: 10.0.0.0/16
+
+VNet2: vnet-west → Address space: 10.1.0.0/16
+
+✅ Step 2: Create Peering from VNet1 → VNet2
+Go to vnet-east → Peerings → + Add
+
+Name: vnet-east-to-west
+
+Peering Type: This virtual network → vnet-west
+
+Select remote subscription and resource group
+
+Check: Allow traffic between VNets
+
+Click OK
+
+✅ Step 3: Create Peering from VNet2 → VNet1
+Go to vnet-west → Peerings → + Add
+
+Name: vnet-west-to-east
+
+Point to vnet-east
+
+Allow traffic → Yes
+
+Click OK
+
+🔄 Both sides must peer each other (bi-directional)!
+
+🖥️ Azure CLI Step-by-Step
+1️⃣ Create Resource Groups & VNets (if needed)
+bash
+Copy
+Edit
+az group create --name RG-East --location eastus
+az network vnet create \
+  --resource-group RG-East \
+  --name vnet-east \
+  --address-prefix 10.0.0.0/16 \
+  --subnet-name subnet-east \
+  --subnet-prefix 10.0.1.0/24
+
+az group create --name RG-West --location westus
+az network vnet create \
+  --resource-group RG-West \
+  --name vnet-west \
+  --address-prefix 10.1.0.0/16 \
+  --subnet-name subnet-west \
+  --subnet-prefix 10.1.1.0/24
+2️⃣ Create Peering from East → West
+bash
+Copy
+Edit
+az network vnet peering create \
+  --name east-to-west \
+  --resource-group RG-East \
+  --vnet-name vnet-east \
+  --remote-vnet /subscriptions/<sub-id>/resourceGroups/RG-West/providers/Microsoft.Network/virtualNetworks/vnet-west \
+  --allow-vnet-access
+3️⃣ Create Peering from West → East
+bash
+Copy
+Edit
+az network vnet peering create \
+  --name west-to-east \
+  --resource-group RG-West \
+  --vnet-name vnet-west \
+  --remote-vnet /subscriptions/<sub-id>/resourceGroups/RG-East/providers/Microsoft.Network/virtualNetworks/vnet-east \
+  --allow-vnet-access
+(Replace <sub-id> with your actual subscription ID)
+
+✅ Verification
+Deploy a VM in each VNet
+
+Try to ping internal IPs between them:
+
+bash
+Copy
+Edit
+ping 10.1.1.4  # From east VM to west VM
+Allow ICMP in NSG if testing with ping.
+
+📦 Summary Table
+Component	Details
+Type	VNet Peering
+Scope	Same Region or Global
+Requirements	Non-overlapping IP ranges
+CLI Command	az network vnet peering create
+Cost	Data transfer charges apply (egress)
+Security	NSGs and UDRs apply normally
+
+🔒 Best Practices
+Use tags to track peered VNets.
+
+Avoid overlapping CIDRs.
+
+Control traffic with NSGs.
